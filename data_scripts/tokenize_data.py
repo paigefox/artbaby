@@ -1,8 +1,9 @@
+import csv
 import os
 from pprint import pprint
 import re
 import tokenize
-from tokenize import STRING
+from tokenize import NUMBER, STRING
 
 rootDir = "/Users/paigefox/repos/artbaby/s3data"
 
@@ -21,7 +22,8 @@ def addToDict(words, key):
 
 def walkFiles(root):
     all_words = {}
-    string_literals = {}
+    addToDict(all_words, "SOL")
+    addToDict(all_words, "EOL")
     stop_at = 0
     for dirName, subdirList, fileList in os.walk(root):
         for fname in fileList:
@@ -29,19 +31,28 @@ def walkFiles(root):
             #     break
             # stop_at += 1
             sourceFileName = dirName + "/" + fname
-            print(sourceFileName)
+            # print(sourceFileName)
+            tokenized_data = []
             with open(sourceFileName, "r") as f:
                 tokens = tokenize.generate_tokens(f.readline)
                 for token in tokens:
                     if token.type == STRING:
-                        addToDict(string_literals, token.string)
+                        for char in token.string:
+                            tokenized_data.append(char)
+                            addToDict(all_words, char)
+                    elif token.type == NUMBER:
+                        # Designate the number as a literal
+                        tokenized_data.append("SOL")
+                        tokenized_data.append(token.string)
+                        tokenized_data.append("EOL")
                     else:
+                        tokenized_data.append(token.string)
                         addToDict(all_words, token.string)
-    print("\n\n\n\nAll words:\n\n\n\n\n")
+            tokenized_file = open(
+                "tokenized/" + fname, "w")
+            wr = csv.writer(tokenized_file, quoting=csv.QUOTE_ALL)
+            wr.writerow(tokenized_data)
+            tokenized_file.close()
     pprint(all_words)
-    print("\n\n\n\nString literals:\n\n\n\n\n")
-    pprint(string_literals)
-    return all_words
-
 
 walkFiles(rootDir)
